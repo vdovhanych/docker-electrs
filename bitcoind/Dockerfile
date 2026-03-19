@@ -1,38 +1,30 @@
-FROM debian:bullseye-slim as builder
+FROM debian:bookworm-slim as builder
 
 WORKDIR /root
 
 ENV BITCOIN_REPO=https://github.com/bitcoin/bitcoin.git
-ENV BITCOIN_BRANCH=master
-ENV BITCOIN_TAG=v22.0
+ENV BITCOIN_TAG=v28.1
 
 RUN apt-get update && \
-    apt-get install git build-essential libtool autotools-dev automake pkg-config \
-    bsdmainutils python3 -y && \
-    apt-get install libevent-dev libboost-system-dev libboost-filesystem-dev libboost-test-dev \
-    libboost-thread-dev libdb-dev libdb++-dev -y && \
-    apt-get install libsqlite3-dev && \
-    git clone $BITCOIN_REPO --branch $BITCOIN_BRANCH --single-branch
+    apt-get install -y git build-essential libtool autotools-dev automake pkg-config \
+    bsdmainutils python3 libevent-dev libsqlite3-dev
 
-RUN (cd bitcoin && git fetch --all --tags --prune && git checkout tags/$BITCOIN_TAG && \
+RUN git clone --depth 1 --branch $BITCOIN_TAG $BITCOIN_REPO
+
+RUN (cd bitcoin && \
       ./autogen.sh && \
       ./configure --disable-tests \
-      --disable-bench --disable-static  \
+      --disable-bench --disable-static \
       --without-gui --disable-zmq \
-      --with-incompatible-bdb \
       CFLAGS='-w' CXXFLAGS='-w' && \
       make -j 4 && \
       strip src/bitcoind && \
       strip src/bitcoin-cli && \
       strip src/bitcoin-tx )
 
-FROM debian:bullseye-slim
+FROM debian:bookworm-slim
 
-RUN apt-get update && apt-get install -y libevent-dev libboost-system-dev libboost-filesystem-dev \
-    libboost-thread-dev libdb-dev libdb++-dev curl build-essential librocksdb-dev=6.11.4-3
-
-ENV ROCKSDB_INCLUDE_DIR=/usr/include
-ENV ROCKSDB_LIB_DIR=/usr/lib
+RUN apt-get update && apt-get install -y libevent-dev libsqlite3-dev
 
 COPY --from=builder /root/bitcoin/src/bitcoind /usr/bin/
 COPY --from=builder /root/bitcoin/src/bitcoin-cli /usr/bin/
