@@ -25,7 +25,7 @@ RUN mv -v bitcoin-$BITCOIND_VERSION/bin/bitcoin-cli .
 
 # Final image
 FROM base as result
-RUN apt-get install -qqy jq
+RUN apt-get update -qqy && apt-get install -qqy jq
 
 # Copy the binaries
 COPY --from=electrs-build /root/.cargo/bin/electrs /usr/bin/electrs

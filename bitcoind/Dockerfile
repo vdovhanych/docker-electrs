@@ -11,16 +11,17 @@ RUN apt-get update && \
 
 RUN git clone --depth 1 --branch $BITCOIN_TAG $BITCOIN_REPO
 
-RUN (cd bitcoin && \
-      ./autogen.sh && \
-      ./configure --disable-tests \
-      --disable-bench --disable-static \
-      --without-gui --disable-zmq \
-      CFLAGS='-w' CXXFLAGS='-w' && \
-      make -j 4 && \
-      strip src/bitcoind && \
-      strip src/bitcoin-cli && \
-      strip src/bitcoin-tx )
+WORKDIR /root/bitcoin
+
+RUN ./autogen.sh && \
+    ./configure --disable-tests \
+    --disable-bench --disable-static \
+    --without-gui --disable-zmq \
+    CFLAGS='-w' CXXFLAGS='-w' && \
+    make -j 4 && \
+    strip src/bitcoind && \
+    strip src/bitcoin-cli && \
+    strip src/bitcoin-tx
 
 FROM debian:bookworm-slim
 
@@ -33,6 +34,6 @@ COPY --from=builder /root/bitcoin/src/bitcoin-tx /usr/bin/
 EXPOSE 18021
 
 ADD entrypoint.sh /root/entrypoint.sh
-RUN chmod +x /root/entrypoint.sh
+RUN chmod a+x /root/entrypoint.sh
 
 CMD ["/root/entrypoint.sh"]
